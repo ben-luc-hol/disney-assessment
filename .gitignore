@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.env
+.DS_Store
+.ipynb_checkpoints/
+*.db
+*.sqlite3
+notebooks/implementation.ipynb
+notebooks/implementation2.ipynb
+data/
+logs/
+.idea
