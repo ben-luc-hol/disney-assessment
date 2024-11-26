@@ -92,7 +92,9 @@ class MovieEmbedder:
             raise
 
     def build_faiss_index(self, embeddings: np.ndarray) -> faiss.Index:
-        """Build and return a FAISS index optimized for CPU search."""
+        """
+        Build and return a FAISS index optimized for CPU search.
+        """
         dimension = embeddings.shape[1]
 
         # Use IVF index for better CPU performance
@@ -115,7 +117,9 @@ class MovieEmbedder:
         return index
 
     def process_embeddings(self):
-        """Process all movies, generate embeddings, and build FAISS index."""
+        """
+        Process all movies, generate embeddings, and build FAISS index.
+        """
         self.logger.info("Starting embedding generation and indexing")
 
         movie_files = list(self.preprocessed_dir.glob('*.json'))
@@ -173,7 +177,9 @@ class MovieEmbedder:
         return index, all_embeddings
 
     def save_artifacts(self, index: faiss.Index, embeddings: np.ndarray):
-        """Save FAISS index, embeddings, and mapping dictionaries."""
+        """
+        Save FAISS index, embeddings, and mapping dictionaries.
+        """
         # Save FAISS index
         faiss.write_index(index, str(self.embeddings_dir / 'movie_embeddings.index'))
 
@@ -190,7 +196,9 @@ class MovieEmbedder:
         self.logger.info(f"Saved artifacts to {self.embeddings_dir}")
 
     def find_similar_movies(self, query, k: int = 5) -> List[Tuple[str, float]]:
-        """Find k most similar movies to a query text."""
+        """
+        Find k most similar movies to a query text.
+        """
         # Generate embedding for query
         # Load index
         embedding = self.generate_text_embedding(query)

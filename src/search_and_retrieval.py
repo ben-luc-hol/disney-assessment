@@ -89,23 +89,22 @@ class SearchAndRetrieval:
 
         return "\n---\n".join(formatted)
 
-
-    def generate_movie_summary(self, query: str, k: int = 5, model: str = "claude-3-sonnet-20240229") -> str:
+    def generate_movie_response(self, query: str, k: int = 5, model: str = "claude-3-sonnet-20240229") -> str:
         """
-        RAG implementation for generating summaries about Disney movies.
+        RAG implementation for Disney movie queries and recommendations.
 
         Args:
-            query: User query about Disney movies
+            query: User query about Disney movies (can be questions, recommendation requests, etc.)
             k: Number of movies to include in context
             model: LLM model to use for generation
 
         Returns:
             Generated response based on retrieved movies
         """
-        self.claude = Anthropic()   # NOTE: API KEY NEEDS TO BE RETRIEVABLE AS AN ENV VARIABLE
+        self.claude = Anthropic()  # NOTE: API KEY NEEDS TO BE RETRIEVABLE AS AN ENV VARIABLE
 
         try:
-            self.logger.info(f"Generating movie summary for query: '{query}'")
+            self.logger.info(f"Generating movie response for: '{query}'")
 
             # Get relevant movies
             movies = self.semantic_search(query, k=k)
@@ -125,19 +124,17 @@ class SearchAndRetrieval:
                 }
                 context_parts.append(context)
 
-            # Create prompt for the LLM
-            prompt = self._create_rag_prompt(query, context_parts)
+            # Create prompts for the LLM
+            system_prompt, user_prompt = self._create_rag_prompt(query, context_parts)
 
             # Generate response using the LLM
-            response = self._generate_llm_response(prompt, model)
+            response = self._generate_llm_response(system_prompt, user_prompt, model)
 
-            self.logger.info("Successfully generated movie summary")
             return response
 
         except Exception as e:
-            self.logger.error(f"Movie summary generation failed: {e}")
+            self.logger.error(f"Movie response generation failed: {e}")
             raise
-
 
     def _create_rag_prompt(self, query: str, context_parts: List[Dict]) -> str:
         """Create prompt for the LLM using retrieved context."""
@@ -172,7 +169,6 @@ class SearchAndRetrieval:
         
         """
         return system_prompt, user_prompt
-
 
     def _generate_llm_response(self, system_prompt: str, user_prompt: str, model: str) -> str:
         """

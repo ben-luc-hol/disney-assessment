@@ -22,6 +22,8 @@ class DisneyETL:
     - Creates embeddings for RAG implementation
     """
     def __init__(self, config: Optional[Dict[str, Any]] = None):
+        self.embedder = None
+        self.searcher = None
         self.project_root = ProjectManager.find_project_root()
         self.dirs = ProjectManager.setup_project_dirs(self.project_root)
         self.logger = LoggingManager.setup_logging(self.project_root, name='DisneyETL', console_output=False)
@@ -86,7 +88,9 @@ class DisneyETL:
             return False
 
     def preprocess_data(self) -> bool:
-        """Preprocess scraped data before loading into database."""
+        """
+        Preprocess scraped data before loading into database.
+        """
         try:
             self.logger.info("Starting data preprocessing")
 
@@ -140,7 +144,6 @@ class DisneyETL:
             self.state['errors'].append(str(e))
             return False
 
-
     def vectorize_data(self) -> bool:
         """
         Create T5 embeddings for all preprocessed movies.
@@ -148,14 +151,14 @@ class DisneyETL:
         try:
             self.logger.info("Starting embedding creation")
 
-            embedder = MovieEmbedder(
+            self.embedder = MovieEmbedder(
                 logger=self.logger,
                 preprocessed_dir=self.dirs['raw'] / 'movie-data-preprocessed',
                 embeddings_dir=self.dirs['processed'] / 'embeddings',
                 model_name='t5-base'
             )
 
-            embedder.process_embeddings()
+            self.embedder.process_embeddings()
 
             self.state['embedding_complete'] = True
             return True
@@ -172,6 +175,16 @@ class DisneyETL:
         try:
             self.logger.info("Setting up search functionality")
             output_dir = self.dirs['output']
+
+            # Create embedder if not exists
+            if not hasattr(self, 'embedder'):
+                self.embedder = MovieEmbedder(
+                    logger=self.logger,
+                    preprocessed_dir=self.dirs['raw'] / 'movie-data-preprocessed',
+                    embeddings_dir=self.dirs['processed'] / 'embeddings',
+                    model_name='t5-base'
+                )
+
             # Initialize search and retrieval
             self.searcher = SearchAndRetrieval(
                 output_dir,
@@ -196,10 +209,8 @@ class DisneyETL:
 
             results = self.searcher.semantic_search(query, k)
 
-            # Convert to DataFrame for nice display
+            # Convert to DataFrame
             df = pd.DataFrame(results)
-
-            # Reorder columns for better presentation
             cols = ['title', 'year', 'similarity_score', 'description', 'genres',
                     'directors', 'cast', 'rating', 'runtime']
             df = df[[c for c in cols if c in df.columns]]
@@ -210,6 +221,16 @@ class DisneyETL:
             self.logger.error(f"Movie search failed: {e}")
             raise
 
+    def ask_about_movies(self, query: str, k: int = 5) -> str:
+        """
+        Ask questions or get recommendations about Disney movies.
+        """
+        try:
+            if not hasattr(self, 'searcher'):
+                self.setup_search()
 
-    def create_summaries():
-        pass
+            return self.searcher.generate_movie_response(query, k)
+
+        except Exception as e:
+            self.logger.error(f"Movie query failed: {e}")
+            raise

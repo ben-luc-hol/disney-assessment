@@ -52,24 +52,22 @@ class LoggingManager:
     """
     Manages project logging configuration.
     """
+
     @staticmethod
     def setup_logging(project_root: Path, name: str = __name__, console_output=False) -> logging.Logger:
-        """Setup logging with file and console output."""
-        # Create timestamped log directory
+        """Setup logging with minimal console output."""
+        # Set root logger to ERROR level to suppress most output
+        logging.getLogger().setLevel(logging.ERROR)
+
+        # Create timestamped log directory for file logs
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         log_dir = project_root / 'logs' / timestamp
         log_dir.mkdir(parents=True, exist_ok=True)
 
-        # Configure root logger
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s | %(name)s | %(levelname)s | %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-
         logger = logging.getLogger(name)
+        logger.setLevel(logging.ERROR)  # Only show critical errors
 
-        # Add file handlers
+        # Add file handlers for when you need to debug
         handlers = [
             (log_dir / 'process.log', logging.INFO),
             (log_dir / 'errors.log', logging.ERROR),
@@ -84,16 +82,7 @@ class LoggingManager:
             ))
             logger.addHandler(handler)
 
-        if console_output:
-            console_handler = logging.StreamHandler()
-            console_handler.setFormatter(logging.Formatter(
-                '%(asctime)s | %(name)s | %(levelname)s | %(message)s',
-                '%Y-%m-%d %H:%M:%S'
-            ))
-            logger.addHandler(console_handler)
-
         return logger
-
 
 class ParallelProcessor:
     """
