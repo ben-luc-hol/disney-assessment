@@ -5,7 +5,7 @@ __pycache__/
 .ipynb_checkpoints/
 *.db
 *.sqlite3
-notebooks/implementation.ipynb
+notebooks/pipeline_demo.ipynb
 notebooks/implementation2.ipynb
 data/
 logs/

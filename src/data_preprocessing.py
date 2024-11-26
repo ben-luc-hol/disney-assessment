@@ -64,7 +64,7 @@ class MoviePreprocessor:
             df[col] = df[col].apply(lambda x: '|'.join(x) if x else '')
 
         # Save CSV
-        output_file = self.raw_dir / 'disney_movies_analysis.csv'
+        output_file = self.raw_dir / 'disney_movies.csv'
         df.to_csv(output_file, index=False)
         self.logger.info(f"Created analysis CSV at {output_file}")
         return df

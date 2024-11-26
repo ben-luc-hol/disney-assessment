@@ -1,6 +1,8 @@
 from typing import List, Tuple, Dict
 import json
 from datetime import datetime
+from anthropic import Anthropic
+
 
 class SearchAndRetrieval:
     """
@@ -11,6 +13,7 @@ class SearchAndRetrieval:
     4. Return formatted results
     """
     def __init__(self, output_dir, logger, embedder, db_manager):
+        self.claude = None
         self.logger = logger
         self.embedder = embedder
         self.db_manager = db_manager
@@ -43,18 +46,12 @@ class SearchAndRetrieval:
     def save_results(self, query: str, results: List[Dict]):
         """
         Save search results to disk for analysis.
-
-        Args:
-            query: The search query
-            results: List of movie dictionaries with similarity scores
+        query: The search query
+        results: List of movie dictionaries with similarity scores
         """
         try:
             # Create a timestamp for the filename
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-
-            # Create results directory if it doesn't exist
-            results_dir = self.project_root / 'results' / 'searches'
-            results_dir.mkdir(parents=True, exist_ok=True)
 
             # Format data for saving
             search_data = {
@@ -65,7 +62,7 @@ class SearchAndRetrieval:
             }
 
             # Save to JSON file
-            output_file = results_dir / f"search_{timestamp}.json"
+            output_file = self.output_dir / f"search_{timestamp}.json"
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(search_data, f, indent=2)
 
@@ -93,10 +90,7 @@ class SearchAndRetrieval:
         return "\n---\n".join(formatted)
 
 
-    def generate_movie_summary(self,
-                               query: str,
-                               k: int = 3,
-                               model: str = "gpt-3.5-turbo") -> str:
+    def generate_movie_summary(self, query: str, k: int = 5, model: str = "claude-3-sonnet-20240229") -> str:
         """
         RAG implementation for generating summaries about Disney movies.
 
@@ -108,6 +102,8 @@ class SearchAndRetrieval:
         Returns:
             Generated response based on retrieved movies
         """
+        self.claude = Anthropic()   # NOTE: API KEY NEEDS TO BE RETRIEVABLE AS AN ENV VARIABLE
+
         try:
             self.logger.info(f"Generating movie summary for query: '{query}'")
 
@@ -153,40 +149,46 @@ class SearchAndRetrieval:
             f"Description: {ctx['description']}"
             for ctx in context_parts
         ])
-
-        prompt = f"""Based on the following Disney movies, answer this question: "{query}"
-    
-    Retrieved Movie Information:
-    {context_text}
-    
-    Please provide a detailed response that:
-    1. Directly addresses the question
-    2. References specific movies and their relevant details
-    3. Explains why these movies are relevant to the query
-    4. Includes interesting connections or patterns among the movies
-    
-    Response:"""
-
-        return prompt
-
-
-    def _generate_llm_response(self, prompt: str, model: str) -> str:
+        system_prompt = (f"""
+            You are an AI assistant whose job is to recommend, summarize, and otherwise provide information about feature-length movies by Disney.
+            You are powered by a data retrieval system that allows you to access a database that informs your answers to the user.
+            
+            The following user prompt yielded the following results from our database:
+            
+            <MOVIE DATA>
+            {context_text}
+            </MOVIE DATA>
+            
+            Please summarize, provide information , and/or recommend films to the user, based on this information.
+            
+                Please provide a detailed response that:
+                 1. Directly addresses the question
+                 2. References specific movies and their relevant details
+                 3. Explains why these movies are relevant to the user's question
+                 4. Includes interesting connections or patterns among the movies.
+        """)
+        
+        user_prompt = f"""Based on the provided data and instructions, answer the following user question: "{query}"
+        
         """
-        Generate response using specified LLM.
-        This example uses OpenAI, but could be adapted for other LLMs.
-        """
-        try:
-            response = openai.ChatCompletion.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": "You are a knowledgeable Disney movie expert."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=500
-            )
-            return response.choices[0].message.content
+        return system_prompt, user_prompt
 
-        except Exception as e:
-            self.logger.error(f"LLM generation failed: {e}")
-            raise
+
+    def _generate_llm_response(self, system_prompt: str, user_prompt: str, model: str) -> str:
+        """
+        Generate response using Anthropic/Claude
+        """
+        response = self.claude.messages.create(
+            model=model,
+            max_tokens=500,
+            temperature=0.4,
+            system=system_prompt,
+            messages=[
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ]
+        )
+
+        return response.content[0].text

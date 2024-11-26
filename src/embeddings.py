@@ -1,6 +1,6 @@
 from transformers import T5Tokenizer, T5EncoderModel
 import torch
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 import numpy as np
 import json

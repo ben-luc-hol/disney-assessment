@@ -116,6 +116,9 @@ class DisneyETL:
         """
         Loads data to SQLite database.
         """
+        if not self.state['preprocessing_complete']:
+            self.preprocess_data()
+
         try:
             self.logger.info("Starting data loading process")
 
@@ -124,6 +127,7 @@ class DisneyETL:
             movie_data_dir = self.dirs['raw'] / 'movie-data-preprocessed'
 
             processed, failed = self.db_manager.batch_insert_from_json_files(movie_data_dir)
+
 
             self.logger.info(f"Loaded {processed} movies into database, {failed} failed")
 
@@ -166,7 +170,7 @@ class DisneyETL:
         Initialize search components.
         """
         try:
-            self.logger.info("Setting up search functionality"
+            self.logger.info("Setting up search functionality")
             output_dir = self.dirs['output']
             # Initialize search and retrieval
             self.searcher = SearchAndRetrieval(
@@ -207,5 +211,5 @@ class DisneyETL:
             raise
 
 
-    def summarize_with_rag():
+    def create_summaries():
         pass

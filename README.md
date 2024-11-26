@@ -22,12 +22,14 @@ project/
 │   ├── data_ingestion.py    # Movie data scraping
 │   ├── data_preprocessing.py # Data cleaning and transformation
 │   ├── database_operations.py # SQLite database operations
-│   ├── embeddings.py        # T5 embeddings generation
-│   └── search_and_retrieval.py # Search and RAG implementation
+│   ├── embeddings.py        # T5 embeddings generation & similarity search mechanics
+│   ├── search_and_retrieval.py # Search and RAG implementation
+│   └── disney_etl.py         #Orchestration and execution of the pipeline
 ├── data/
 │   ├── raw/                 # Raw JSON movie data
-│   └── processed/           # Processed data and embeddings
+│   └── processed/           # Processed data and embeddings (+ FAISS index vector storage and SQLite DB)
 ├── logs/                    # Pipeline execution logs
+├── output/                  #Search & query results
 └── notebooks/              
     └── pipeline_demo.ipynb  # Demo notebook
 ```
@@ -40,10 +42,10 @@ git clone https://github.com/yourusername/disney-movie-pipeline.git
 cd disney-movie-pipeline
 ```
 
-2. Create and activate a virtual environment:
+2. Create and activate a virtual environment (I usually just do conda):
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+conda create --name <ur env>
+conda activate <ur env>
 ```
 
 3. Install dependencies:
@@ -74,7 +76,7 @@ etl.vectorize_data()
 ### Semantic Search
 
 ```python
-# Search for similar movies
+# Search for similar movies based on a text prompt
 results = etl.movie_search("animated movies about family and adventure", k=5)
 print(results)
 ```
