@@ -9,10 +9,15 @@ from tqdm import tqdm
 import pandas as pd
 import time
 
+
 class ProjectManager:
     """
-    Manages project-wide utility functions and directory structure.
+    Manages project-wide utility functions, enforces project directory structure, sets up logging and .
     """
+    def __init__(self):
+        self.project_root = self.find_project_root()
+        self.directories = self.setup_directories()
+
     @staticmethod
     def find_project_root():
         """
@@ -25,47 +30,17 @@ class ProjectManager:
             current_dir = current_dir.parent
         raise ValueError("Could not find project root directory")
 
-    @staticmethod
-    def setup_project_dirs(project_root: Path) -> Dict[str, Path]:
-        """
-        Creates and returns project directory structure.
-
-        Returns:
-            Dict with paths for different project directories
-        """
-        dirs = {
-            'data': project_root / 'data',
-            'raw': project_root / 'data' / 'raw',
-            'processed': project_root / 'data' / 'processed',
-            'logs': project_root / 'logs',
-            'models': project_root / 'models',
-            'output': project_root / 'output'
-        }
-
-        for dir_path in dirs.values():
-            dir_path.mkdir(parents=True, exist_ok=True)
-
-        return dirs
-
-
-class LoggingManager:
-    """
-    Manages project logging configuration.
-    """
-
-    @staticmethod
-    def setup_logging(project_root: Path, name: str = __name__, console_output=False) -> logging.Logger:
-        """Setup logging with minimal console output."""
+    @classmethod
+    def setup_component_logging(cls, root, name) -> logging.Logger:
+        """Setup logging """
         # Set root logger to ERROR level to suppress most output
-        logging.getLogger().setLevel(logging.ERROR)
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.ERROR)
 
         # Create timestamped log directory for file logs
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        log_dir = project_root / 'logs' / timestamp
+        log_dir = root / 'logs' / timestamp
         log_dir.mkdir(parents=True, exist_ok=True)
-
-        logger = logging.getLogger(name)
-        logger.setLevel(logging.ERROR)  # Only show critical errors
 
         # Add file handlers for when you need to debug
         handlers = [
@@ -84,21 +59,27 @@ class LoggingManager:
 
         return logger
 
-class ParallelProcessor:
-    """
-    Handles parallel processing operations.
-    """
-    def __init__(self, logger: logging.Logger):
-        self.logger = logger
+    def setup_directories(self) -> Dict[str, Path]:
+        """
+        Creates and returns project directory structure.
 
-    def process_parallel(
-            self,
-            items: List[Any],
-            process_fn: Callable,
-            desc: str = "Processing",
-            max_workers: Optional[int] = None,
-            **kwargs
-    ) -> List[Any]:
+        Returns:
+            Dict with paths for different project directories
+        """
+        dirs = {
+            'data': self.project_root / 'data',
+            'raw': self.project_root / 'data' / 'raw',
+            'processed': self.project_root / 'data' / 'processed',
+            'logs': self.project_root / 'logs',
+            'output': self.project_root / 'output'
+        }
+
+        for dir_path in dirs.values():
+            dir_path.mkdir(parents=True, exist_ok=True)
+
+        return dirs
+
+    def threadpool(self, items: List[Any], process_fn: Callable, desc: str = "Processing", max_workers: Optional[int] = None, **kwargs) -> List[Any]:
         """Process items in parallel using threads."""
         if max_workers is None:
             max_workers = os.cpu_count() * 2

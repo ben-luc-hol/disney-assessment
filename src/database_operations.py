@@ -2,17 +2,21 @@ import sqlite3
 from pathlib import Path
 import json
 from typing import Dict, List, Tuple
-import logging
-from .project_utils import ProjectManager, LoggingManager
+from tqdm.notebook import tqdm
+from .project_utils import ProjectManager
 
-class DatabaseManager:
+
+class DatabaseOps:
     """
     Manages database operations for the Disney movie dataset.
     """
-    def __init__(self, db_path: Path, logger: logging.Logger):
+    def __init__(self, project_manager):
         """Initialize database connection and create tables if they don't exist."""
-        self.db_path = db_path
-        self.logger = logger
+        self.project_root = project_manager.project_root
+        self.logger = ProjectManager.setup_component_logging(root=self.project_root, name=self.__class__.__name__)
+        self.db_path = project_manager.directories['processed'] / 'movie_data.db'
+        self.initialize_database()
+        self.logger.info(f"Database initialized at {self.db_path}")
 
     def connect(self):
         """Create a database connection."""
@@ -184,18 +188,18 @@ class DatabaseManager:
 
         self.logger.info(f"Starting batch insert from {json_dir}")
 
-        for json_file in json_dir.glob('*.json'):
+        for json_file in tqdm(json_dir.glob('*.json'), desc="Loading movies to database"):
             try:
                 with open(json_file, 'r', encoding='utf-8') as f:
                     movie_data = json.load(f)
                     self.insert_movie(movie_data)
                     processed += 1
-                    if processed % 10 == 0:
-                        self.logger.info(f"Processed {processed} movies")
+
             except Exception as e:
                 self.logger.error(f"Error processing {json_file.name}: {e}")
                 failed += 1
 
+        # Just log final summary
         self.logger.info(f"Database loading completed: {processed} succeeded, {failed} failed")
         return processed, failed
 

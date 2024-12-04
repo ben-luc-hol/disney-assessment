@@ -11,7 +11,7 @@ from tqdm.notebook import tqdm
 from bs4 import BeautifulSoup
 import time
 import logging
-from .project_utils import ProjectManager, LoggingManager
+from .project_utils import ProjectManager
 
 
 class MovieScraper:
@@ -20,17 +20,18 @@ class MovieScraper:
     """
     base_url = "https://movies.disney.com/_grill/filter/all-movies"
 
-    def __init__(self, logger, parallel_processor, movie_data_dir: Path):
-        self.logger = logger
-        self.processor = parallel_processor
-        self.movie_data_dir = movie_data_dir / 'movie-data'
-        self.movie_data_dir.mkdir(exist_ok=True)
+    def __init__(self, project_manager):
+        self.project_root = project_manager.project_root
+        self.logger = ProjectManager.setup_component_logging(root=self.project_root, name=self.__class__.__name__)
+        self.movie_dir = project_manager.directories['raw'] / "movie-data"
+        self.movie_dir.mkdir(exist_ok=True)
 
     def get_all_movies(self) -> List[Dict]:
         """
         Paginate through the API to get all movies.
         Returns list of movie dictionaries from API.
         """
+        self.logger.info("Calling API to get all movies")
         all_movies = []
         offset = 0
 
@@ -47,7 +48,7 @@ class MovieScraper:
         pages_needed = (total_count + 39) // 40  # Round up division
 
         # Paginate through all pages
-        for page in tqdm(range(pages_needed), desc="Iterating through Disney's API"):
+        for page in tqdm(range(pages_needed), desc="Iterating through Disney's API by page"):
             offset = page * 40
             response = requests.get(
                 self.base_url,
@@ -62,14 +63,13 @@ class MovieScraper:
             self.logger.debug(f"Processed page {page + 1}/{pages_needed}")
             time.sleep(0.3)  # Be nice to Disney's servers
 
-        self.logger.info(f"Successfully collected {len(all_movies)} movies")
+        self.logger.info(f"Successfully collected {len(all_movies)} movie titles")
         return all_movies
 
     def movie_to_json(self, movie_dict: Dict):
         """
         Saves a single movie dictionary to a JSON file by using the movie's slugified title
         """
-
         if not movie_dict:
             self.logger.warning("Received None or empty movie dictionary")
             return
@@ -89,10 +89,9 @@ class MovieScraper:
 
         # Save the file
         try:
-            filepath = self.movie_data_dir / filename
+            filepath = self.movie_dir / filename
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(movie_dict, f, indent=4, ensure_ascii=False)
-            self.logger.info(f"Saved movie to {filepath}")
         except Exception as e:
             self.logger.error(f"Error saving movie to JSON: {str(e)}")
 
@@ -176,18 +175,12 @@ class MovieScraper:
         Execution / run function to run the scraper and save each JSON file to directory.
         """
         # Get all movies
-        self.logger.info(f"Saving movie data to {self.movie_data_dir}")
-        self.logger.info("Fetching all movies from Disney API...")
         movies = self.get_all_movies()
-        self.logger.info(f"Found {len(movies)} movies")
 
         # Process each movie
         self.logger.info("Processing individual movies...")
         for movie in tqdm(movies, desc="Processing movies"):
             # Process the movie
             self.process_movie(movie)
-        self.logger.info(f"Completed -- All movies saved to {self.movie_data_dir}/")
+        self.logger.info(f"Completed scraping of movie titles.")
 
-if __name__ == "__main__":
-    scraper = MovieScraper()
-    scraper.run()

@@ -10,19 +10,22 @@ This package provides tools for:
 - Generating embeddings for RAG implementation
 """
 
-from .disney_etl import DisneyETL
-from .project_utils import ProjectManager, LoggingManager, ParallelProcessor
+#from .disney_etl import DisneyETL
+from .project_utils import ProjectManager
 from .data_ingestion import MovieScraper
 from .data_preprocessing import MoviePreprocessor
-from .database_operations import DatabaseManager
+from .database_operations import DatabaseOps
+from .embeddings import MovieEmbedder
+from .search_and_retrieval import SearchAndRetrieval
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 __all__ = [
     'DisneyETL',
     'MovieScraper',
-    'DatabaseManager',
+    'DatabaseOps',
     'ProjectManager',
-    'LoggingManager',
-    'ParallelProcessor',
+    'MovieEmbedder',
+    'SearchAndRetrieval',
+    'MoviePreprocessor'
 ]
